@@ -223,19 +223,17 @@ if (MatchRound() == 1)
 {
     if (Logs_TrackMatchStartEnd)
     {
-        // LogToInspector(<",host,<0>", HostPlayer().myName>);
         LogToInspector(<",match_start,<0>,<1>", <"<0>,<1>,<2>", Scrim_MatchTime, CurrentMap(), CurrentGameMode()>, <"<0>,<1>", Team.Team1, Team.Team2>>);
     }
 }
 
 rule: "Logs: Meta"
+Event.OnPlayerJoin
 if (Logs_EnableLogTracker == true)
-if (MatchRound() == 1)
+if (HostPlayer() == true)
 {
-    if (Logs_TrackMatchStartEnd)
     {
-        // LogToInspector(<",host,<0>", HostPlayer().myName>);
-        LogToInspector(<",match_start,<0>,<1>", <"<0>,<1>,<2>", Scrim_MatchTime, CurrentMap(), CurrentGameMode()>, <"<0>,<1>", Team.Team1, Team.Team2>>);
+        LogToInspector(<",meta,<0>,<1>", EventPlayer(), Meta_playerLanguage>);
     }
 }
 
