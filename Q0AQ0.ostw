@@ -33,8 +33,8 @@ globalvar Map<String, Hero> _ultSaverTeam1Hero;
 globalvar Map<String, Hero> _ultSaverTeam2Hero;
 globalvar Map<String, Number> _ultSaverTeam1Charge;
 globalvar Map<String, Number> _ultSaverTeam2Charge;
-playervar String myName;
-playervar String myLanguage;
+playervar String Meta_playerName;
+playervar String Meta_playerLanguage;
 playervar Boolean isRejoining;
 playervar Number isRejoiningCharge;
 
@@ -105,8 +105,8 @@ if (IsBetweenRounds() == true)
 rule: "UltSaver: On player join set player's name"
 Event.OnPlayerJoin
 {
-    myLanguage = LANGUAGES[IndexOfArrayValue(LANGUAGE_SAMPLES, <"<0>", Map.PracticeRange>)];
-    myName = <"<0>_<1>", EventPlayer(), myLanguage>;
+    Meta_playerLanguage = LANGUAGES[IndexOfArrayValue(LANGUAGE_SAMPLES, <"<0>", Map.PracticeRange>)];
+    Meta_playerName = <"<0>_<1>", EventPlayer(), Meta_playerLanguage>;
 }
 
 rule: "UltSaver: On player join recover"
@@ -114,11 +114,11 @@ Event.OnPlayerJoin
 if (IsWaitingForPlayers() == false)
 if (IsBetweenRounds() == false) 
 {
-    if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(myName) : _ultSaverTeam2Hero.Get(myName))
+    if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(Meta_playerName) : _ultSaverTeam2Hero.Get(Meta_playerName))
     {
         isRejoining = true;
-        isRejoiningCharge = TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Charge.Get(myName) : _ultSaverTeam2Charge.Get(myName);
-        ForcePlayerHero(EventPlayer(), TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(myName) : _ultSaverTeam2Hero.Get(myName));
+        isRejoiningCharge = TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Charge.Get(Meta_playerName) : _ultSaverTeam2Charge.Get(Meta_playerName);
+        ForcePlayerHero(EventPlayer(), TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(Meta_playerName) : _ultSaverTeam2Hero.Get(Meta_playerName));
     }
 }
 
@@ -138,15 +138,15 @@ if (isRejoining == true)
 rule: "UltSaver: Track player's current hero"
 Event.OngoingPlayer
 if (IsWaitingForPlayers() == false)
-if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(myName) != HeroOf(EventPlayer()) : _ultSaverTeam2Hero.Get(myName) != HeroOf(EventPlayer()))
+if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(Meta_playerName) != HeroOf(EventPlayer()) : _ultSaverTeam2Hero.Get(Meta_playerName) != HeroOf(EventPlayer()))
 {
     if (TeamOf(EventPlayer()) == Team.Team1) 
     {
-        Map<String, Hero>.SetOrAdd(_ultSaverTeam1Hero, myName, HeroOf(EventPlayer()));
+        Map<String, Hero>.SetOrAdd(_ultSaverTeam1Hero, Meta_playerName, HeroOf(EventPlayer()));
     }
     else 
     {
-        Map<String, Hero>.SetOrAdd(_ultSaverTeam2Hero, myName, HeroOf(EventPlayer()));
+        Map<String, Hero>.SetOrAdd(_ultSaverTeam2Hero, Meta_playerName, HeroOf(EventPlayer()));
     }
     Wait(1);
     LoopIfConditionIsTrue();
@@ -158,7 +158,7 @@ if (IsWaitingForPlayers() == false)
 // if (IsInAlternateForm(EventPlayer()) == false && HeroOf(EventPlayer()) == Hero.Dva) // Ignore mini dva
 // if ((HeroOf(EventPlayer()) != Hero.Dva && IsInAlternateForm(EventPlayer()) == true))
 if (IsDuplicating(EventPlayer()) == false) // And echo during duplication
-if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Charge.Get(myName) != UltimateChargePercent(EventPlayer()) : _ultSaverTeam2Charge.Get(myName) != UltimateChargePercent(EventPlayer()))
+if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Charge.Get(Meta_playerName) != UltimateChargePercent(EventPlayer()) : _ultSaverTeam2Charge.Get(Meta_playerName) != UltimateChargePercent(EventPlayer()))
 {
     /* if (IsInAlternateForm(EventPlayer()) == true && HeroOf(EventPlayer()) == Hero.Dva)
     {
@@ -167,11 +167,11 @@ if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Charge.Get(myName) != Ul
     AbortIf(IsInAlternateForm(EventPlayer()) == true && HeroOf(EventPlayer()) == Hero.Dva);
     if (TeamOf(EventPlayer()) == Team.Team1)
     {
-        Map<String, Number>.SetOrAdd(_ultSaverTeam1Charge, myName, UltimateChargePercent(EventPlayer()));
+        Map<String, Number>.SetOrAdd(_ultSaverTeam1Charge, Meta_playerName, UltimateChargePercent(EventPlayer()));
     }
     else
     {
-        Map<String, Number>.SetOrAdd(_ultSaverTeam2Charge, myName, UltimateChargePercent(EventPlayer()));
+        Map<String, Number>.SetOrAdd(_ultSaverTeam2Charge, Meta_playerName, UltimateChargePercent(EventPlayer()));
     }
     Wait(1);
     LoopIfConditionIsTrue();
@@ -183,11 +183,11 @@ if (IsUsingUltimate(EventPlayer()) == true)
 {
     if (TeamOf(EventPlayer()) == Team.Team1)
     {
-        Map<String, Number>.SetOrAdd(_ultSaverTeam1Charge, myName, 0);
+        Map<String, Number>.SetOrAdd(_ultSaverTeam1Charge, Meta_playerName, 0);
     }
     else
     {
-        Map<String, Number>.SetOrAdd(_ultSaverTeam2Charge, myName, 0);
+        Map<String, Number>.SetOrAdd(_ultSaverTeam2Charge, Meta_playerName, 0);
     }
     Wait(0.25);
     LoopIfConditionIsTrue();
