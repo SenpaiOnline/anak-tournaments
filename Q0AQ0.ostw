@@ -35,8 +35,8 @@ globalvar Map<String, Number> _ultSaverTeam1Charge;
 globalvar Map<String, Number> _ultSaverTeam2Charge;
 playervar String Meta_playerName;
 playervar String Meta_playerLanguage;
-playervar Boolean isRejoining;
-playervar Number isRejoiningCharge;
+playervar Boolean Ult_isPlayerReconnecting;
+playervar Number Ult_reconnectingPlayerChargePercent;
 
 globalvar String[] LANGUAGE_SAMPLES = ["Practice Range", "Trainingsbereich", "Práctica de combate", "Campo de pruebas", "Champ de tir", "Zona d'addestramento", "練習場", "훈련장", "Obszar treningowy", "Campo de Treinamento", "УЧЕБНЫЙ ПОЛИГОН", "训练靶场", "訓練中心"];
 globalvar String[] LANGUAGES = ["en-US", "de-DE", "es-ES", "es-MX", "fr-FR", "it-IT", "ja-JP", "ko-KR", "pl-PL", "pt-BR", "ru-RU", "zh-CN", "zh-TW"];
@@ -116,8 +116,8 @@ if (IsBetweenRounds() == false)
 {
     if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(Meta_playerName) : _ultSaverTeam2Hero.Get(Meta_playerName))
     {
-        isRejoining = true;
-        isRejoiningCharge = TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Charge.Get(Meta_playerName) : _ultSaverTeam2Charge.Get(Meta_playerName);
+        Ult_isPlayerReconnecting = true;
+        Ult_reconnectingPlayerChargePercent = TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Charge.Get(Meta_playerName) : _ultSaverTeam2Charge.Get(Meta_playerName);
         ForcePlayerHero(EventPlayer(), TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(Meta_playerName) : _ultSaverTeam2Hero.Get(Meta_playerName));
     }
 }
@@ -126,13 +126,13 @@ rule: "UltSaver: Restore player's hero and ultimate charge"
 Event.OngoingPlayer
 if (IsAlive(EventPlayer()) == true)
 if (HasSpawned(EventPlayer()) == true)
-if (isRejoining == true)
+if (Ult_isPlayerReconnecting == true)
 {
     StopForcingHero(EventPlayer());
     Wait(1);
-    SetUltimateCharge(EventPlayer(), isRejoiningCharge);
-    isRejoining = false;
-    isRejoiningCharge = 0;
+    SetUltimateCharge(EventPlayer(), Ult_reconnectingPlayerChargePercent);
+    Ult_isPlayerReconnecting = false;
+    Ult_reconnectingPlayerChargePercent = 0;
 }
 
 rule: "UltSaver: Track player's current hero"
