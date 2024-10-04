@@ -1,0 +1,609 @@
+struct Map<K, V>
+{
+    public K[] Keys;
+    public V[] Values;
+
+    public V Get(K key)
+    {
+        return Values[Keys.IndexOf(key)];
+    }
+    
+    public static void Set(ref Map<K, V> dictionary, in K key, in V value)
+    {
+        dictionary.Values[dictionary.Keys.IndexOf(key)] = value;
+    }
+    
+    public static void Add(ref Map<K, V> dictionary, in K key, in V value)
+    {
+        dictionary.Keys += key;
+        dictionary.Values += value;
+    }
+
+    public static void SetOrAdd(ref Map<K, V> dictionary, in K key, in V value)
+    {
+        Number index = dictionary.Keys.IndexOf(key);
+        if (index == -1)
+            Add(dictionary, key, value);
+        else
+            dictionary.Values[index] = value;
+    }
+}
+
+globalvar Map<String, Hero> _ultSaverTeam1Hero;
+globalvar Map<String, Hero> _ultSaverTeam2Hero;
+globalvar Map<String, Number> _ultSaverTeam1Charge;
+globalvar Map<String, Number> _ultSaverTeam2Charge;
+playervar String myName;
+playervar String myLanguage;
+playervar Boolean isRejoining;
+playervar Number isRejoiningCharge;
+
+globalvar String[] LANGUAGE_SAMPLES = ["Practice Range", "Trainingsbereich", "Práctica de combate", "Campo de pruebas", "Champ de tir", "Zona d'addestramento", "練習場", "훈련장", "Obszar treningowy", "Campo de Treinamento", "УЧЕБНЫЙ ПОЛИГОН", "训练靶场", "訓練中心"];
+globalvar String[] LANGUAGES = ["en-US", "de-DE", "es-ES", "es-MX", "fr-FR", "it-IT", "ja-JP", "ko-KR", "pl-PL", "pt-BR", "ru-RU", "zh-CN", "zh-TW"];
+globalvar define Scrim_MatchTime;
+globalvar define Logs_EnableLogTracker;
+globalvar define Logs_OutputFormat;
+globalvar define Logs_CurrentObjectiveIndex;
+globalvar define Logs_CurrentControlScoringTeam;
+globalvar define Logs_TrackKills;
+globalvar define Logs_TrackHeroSwaps;
+globalvar define Logs_TrackObjectiveCapture;
+globalvar define Logs_PointCaptureProgressStep;
+globalvar define Logs_PayloadCaptureProgressStep;
+globalvar define Logs_PointCaptureProgress;
+globalvar define Logs_PayloadCaptureProgress;
+globalvar define Logs_TrackAbilities;
+globalvar define Logs_TrackUltimates;
+globalvar define Logs_TrackOffensiveAssists;
+globalvar define Logs_TrackDefensiveAssists;
+globalvar define Logs_TrackDamage;
+globalvar define Logs_TrackHealing;
+globalvar define Logs_TrackDvaDemechs;
+globalvar define Logs_TrackEchoDuplicates;
+globalvar define Logs_TrackRoundStartEnd;
+globalvar define Logs_TrackMatchStartEnd;
+globalvar define Logs_PlayerSummaryFrequency;
+globalvar define Logs_PlayerSummaryCount;
+globalvar define Logs_TrackMercyRez;
+playervar define Logs_LastHero;
+playervar define Logs_LastHeroTime;
+playervar define Logs_HeroesPlayedTimeArray;
+playervar Hero[] Logs_HeroesPlayedArray;
+playervar define Logs_OffensiveAssists;
+playervar define Logs_DefensiveAssists;
+playervar define Logs_CurrentHeroIterator;
+playervar define Logs_CurrentHeroIterated;
+playervar define Logs_UltimateID;
+playervar define Logs_DuplicateID;
+
+void ultSaverCleanup() 
+{
+    _ultSaverTeam1Hero.Keys = [];
+    _ultSaverTeam1Hero.Values = [];
+
+    _ultSaverTeam2Hero.Keys = [];
+    _ultSaverTeam2Hero.Values = [];
+
+    _ultSaverTeam1Charge.Keys = [];
+    _ultSaverTeam1Charge.Values = [];
+
+    _ultSaverTeam2Charge.Keys = [];
+    _ultSaverTeam2Charge.Values = [];
+}
+
+rule: "UltSaver: On init cleanup"
+{
+    ultSaverCleanup();
+}
+
+rule: "UltSaver: In between rounds cleanup"
+if (IsBetweenRounds() == true)
+{
+    ultSaverCleanup();
+}
+
+rule: "UltSaver: On player join set player's name"
+Event.OnPlayerJoin
+{
+    myLanguage = LANGUAGES[IndexOfArrayValue(LANGUAGE_SAMPLES, <"<0>", Map.PracticeRange>)];
+    myName = <"<0>_<1>", EventPlayer(), myLanguage>;
+}
+
+rule: "UltSaver: On player join recover"
+Event.OnPlayerJoin
+if (IsWaitingForPlayers() == false)
+if (IsBetweenRounds() == false) 
+{
+    if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(myName) : _ultSaverTeam2Hero.Get(myName))
+    {
+        isRejoining = true;
+        isRejoiningCharge = TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Charge.Get(myName) : _ultSaverTeam2Charge.Get(myName);
+        ForcePlayerHero(EventPlayer(), TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(myName) : _ultSaverTeam2Hero.Get(myName));
+    }
+}
+
+rule: "UltSaver: Restore player's hero and ultimate charge"
+Event.OngoingPlayer
+if (IsAlive(EventPlayer()) == true)
+if (HasSpawned(EventPlayer()) == true)
+if (isRejoining == true)
+{
+    StopForcingHero(EventPlayer());
+    Wait(1);
+    SetUltimateCharge(EventPlayer(), isRejoiningCharge);
+    isRejoining = false;
+    isRejoiningCharge = 0;
+}
+
+rule: "UltSaver: Track player's current hero"
+Event.OngoingPlayer
+if (IsWaitingForPlayers() == false)
+if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Hero.Get(myName) != HeroOf(EventPlayer()) : _ultSaverTeam2Hero.Get(myName) != HeroOf(EventPlayer()))
+{
+    if (TeamOf(EventPlayer()) == Team.Team1) 
+    {
+        Map<String, Hero>.SetOrAdd(_ultSaverTeam1Hero, myName, HeroOf(EventPlayer()));
+    }
+    else 
+    {
+        Map<String, Hero>.SetOrAdd(_ultSaverTeam2Hero, myName, HeroOf(EventPlayer()));
+    }
+    Wait(1);
+    LoopIfConditionIsTrue();
+}
+
+rule: "UltSaver: Track player's ultimate charge"
+Event.OngoingPlayer
+if (IsWaitingForPlayers() == false) 
+// if (IsInAlternateForm(EventPlayer()) == false && HeroOf(EventPlayer()) == Hero.Dva) // Ignore mini dva
+// if ((HeroOf(EventPlayer()) != Hero.Dva && IsInAlternateForm(EventPlayer()) == true))
+if (IsDuplicating(EventPlayer()) == false) // And echo during duplication
+if (TeamOf(EventPlayer()) == Team.Team1 ? _ultSaverTeam1Charge.Get(myName) != UltimateChargePercent(EventPlayer()) : _ultSaverTeam2Charge.Get(myName) != UltimateChargePercent(EventPlayer()))
+{
+    /* if (IsInAlternateForm(EventPlayer()) == true && HeroOf(EventPlayer()) == Hero.Dva)
+    {
+        Abort();
+    } */
+    AbortIf(IsInAlternateForm(EventPlayer()) == true && HeroOf(EventPlayer()) == Hero.Dva);
+    if (TeamOf(EventPlayer()) == Team.Team1)
+    {
+        Map<String, Number>.SetOrAdd(_ultSaverTeam1Charge, myName, UltimateChargePercent(EventPlayer()));
+    }
+    else
+    {
+        Map<String, Number>.SetOrAdd(_ultSaverTeam2Charge, myName, UltimateChargePercent(EventPlayer()));
+    }
+    Wait(1);
+    LoopIfConditionIsTrue();
+}
+
+rule: 'UltSaver: Reset ult charge'
+Event.OngoingPlayer
+if (IsUsingUltimate(EventPlayer()) == true)
+{
+    if (TeamOf(EventPlayer()) == Team.Team1)
+    {
+        Map<String, Number>.SetOrAdd(_ultSaverTeam1Charge, myName, 0);
+    }
+    else
+    {
+        Map<String, Number>.SetOrAdd(_ultSaverTeam2Charge, myName, 0);
+    }
+    Wait(0.25);
+    LoopIfConditionIsTrue();
+}
+
+rule: "Settings: Log Options"
+{
+    Logs_EnableLogTracker = true; /* WorkshopSettingToggle("Log Generator", "Enable Log Generator", true, 0); */
+    Logs_OutputFormat = 0; /* WorkshopSettingCombo("Log Generator", "Output Format", 0, ["CSV"], 1); */
+    Logs_TrackHeroSwaps = true; /* WorkshopSettingToggle("Log Generator", "Hero Swaps", true, 5); */
+    Logs_TrackMatchStartEnd = true; /* WorkshopSettingToggle("Log Generator", "Match Start & End", true, 13); */
+    Logs_TrackRoundStartEnd = true; /* WorkshopSettingToggle("Log Generator", "Round Start & End", true, 14); */
+    Logs_TrackObjectiveCapture = true; /* WorkshopSettingToggle("Log Generator", "Objective Captures", false, 15); */
+    Logs_PointCaptureProgressStep = 33.333;/* WorkshopSettingReal("Log Generator", "Control Point Progress Increment", 33.333, 0, 100, 16); */
+    Logs_PayloadCaptureProgressStep = 10; /* WorkshopSettingReal("Log Generator", "Payload Progress Increment", 10, 0, 100, 17); */
+    Logs_PlayerSummaryFrequency = 0;/* WorkshopSettingCombo("Log Generator", "Player Stat Summary Frequency", 0, ["Every Round End", "Only Match End", "Off"], 18); */
+}
+
+rule: "Logs: Update Match Time"
+{
+    Scrim_MatchTime = 0;
+    while (true)
+    {
+        WaitUntil(IsGameInProgress(), 99999);
+        ChaseVariableAtRate(Scrim_MatchTime, 99999, 1, RateChaseReevaluation.None);
+        WaitUntil(!IsGameInProgress(), 99999);
+        StopChasingVariable(Scrim_MatchTime);
+    }
+}
+
+rule: "Logs: Match Start"
+if (Logs_EnableLogTracker == true)
+if (MatchRound() == 1)
+{
+    if (Logs_TrackMatchStartEnd)
+    {
+        // LogToInspector(<",host,<0>", HostPlayer().myName>);
+        LogToInspector(<",match_start,<0>,<1>", <"<0>,<1>,<2>", Scrim_MatchTime, CurrentMap(), CurrentGameMode()>, <"<0>,<1>", Team.Team1, Team.Team2>>);
+    }
+}
+
+rule: "Logs: Meta"
+if (Logs_EnableLogTracker == true)
+if (MatchRound() == 1)
+{
+    if (Logs_TrackMatchStartEnd)
+    {
+        // LogToInspector(<",host,<0>", HostPlayer().myName>);
+        LogToInspector(<",match_start,<0>,<1>", <"<0>,<1>,<2>", Scrim_MatchTime, CurrentMap(), CurrentGameMode()>, <"<0>,<1>", Team.Team1, Team.Team2>>);
+    }
+}
+
+rule: "Logs: Round Start"
+if (Logs_EnableLogTracker == true)
+if (IsInSetup() == true)
+{
+    Logs_CurrentControlScoringTeam = Team.All;
+    Logs_CurrentObjectiveIndex = ObjectiveIndex();
+    if (Logs_TrackRoundStartEnd == true)
+    {
+        LogToInspector(<",round_start,<0>,<1>,<2>", <"<0>,<1>,<2>", Scrim_MatchTime, MatchRound(), CurrentGameMode() != GameMode.Control ? IsTeamOnOffense(Team.Team1) ? Team.Team1 : Team.Team2 : null>, <"<0>,<1>", TeamScore(Team.Team1), TeamScore(Team.Team2)>, <"<0>", ObjectiveIndex()>>);
+        WaitUntil(IsGameInProgress(), 99999);
+        LogToInspector(<",setup_complete,<0>", <"<0>,<1>,<2>", Scrim_MatchTime, MatchRound(), MatchTime()>>);
+    }
+}
+
+rule: "Logs: Round Complete"
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackRoundStartEnd == true)
+if (IsBetweenRounds() == true)
+{
+    LogToInspector(<",round_end,<0>,<1>,<2>", <"<0>,<1>,<2>", Scrim_MatchTime, MatchRound(), CurrentGameMode() != GameMode.Control ? IsTeamOnOffense(Team.Team1) ? Team.Team1 : Team.Team2 : null>, <"<0>,<1>", TeamScore(Team.Team1), TeamScore(Team.Team2)>, <"<0>,<1>,<2>", ObjectiveIndex(), <"<0>,<1>", ControlModeScoringPercentage(Team.Team1), ControlModeScoringPercentage(Team.Team2)>, MatchTime()>>);
+}
+
+rule: "Logs: Match Complete"
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackMatchStartEnd == true)
+if (IsMatchComplete() == true)
+{
+    LogToInspector(<",match_end,<0>,<1>,<2>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>", TeamScore(Team.Team1)>, <"<0>", TeamScore(Team.Team2)>>);
+}
+
+rule: "Logs: Control Point Increment"
+if (Logs_EnableLogTracker == true)
+if (Logs_PointCaptureProgressStep > 0)
+if (IsGameInProgress() == true)
+if (PointCapturePercentage() >= Logs_PointCaptureProgress + Logs_PointCaptureProgressStep)
+{
+    LogToInspector(<",point_progress,<0>,<1>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>,<1>,<2>", CurrentGameMode() == GameMode.Control ? OppositeTeamOf(ControlModeScoringTeam()) : IsTeamOnOffense(Team.Team1) ? Team.Team1 : Team.Team2, ObjectiveIndex(), PointCapturePercentage()>>);
+    Logs_PointCaptureProgress += Logs_PointCaptureProgressStep;
+}
+
+rule: "Logs: Payload Increment"
+if (Logs_EnableLogTracker == true)
+if (Logs_PayloadCaptureProgressStep > 0)
+if (IsGameInProgress() == true)
+if (PayloadProgressPercentage() >= Logs_PayloadCaptureProgress + Logs_PayloadCaptureProgressStep)
+{
+    LogToInspector(<",payload_progress,<0>,<1>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>,<1>,<2>", IsTeamOnOffense(Team.Team1) ? Team.Team1 : Team.Team2, ObjectiveIndex(), PayloadProgressPercentage()>>);
+    Logs_PayloadCaptureProgress += Logs_PayloadCaptureProgressStep;
+}
+
+rule: "Logs: Reset Control Point Progress"
+if (Logs_EnableLogTracker == true)
+if (Logs_PointCaptureProgressStep > 0)
+if (IsGameInProgress() == true)
+if (PointCapturePercentage() == 0)
+{
+    Logs_PointCaptureProgress = 0;
+}
+
+rule: "Logs: Reset Payload Progress"
+if (Logs_EnableLogTracker == true)
+if (Logs_PayloadCaptureProgressStep > 0)
+if (IsGameInProgress() == true)
+if (PayloadProgressPercentage() == 0)
+{
+    Logs_PayloadCaptureProgress = 0;
+}
+
+rule: "Logs: Objective Captured (Non-Control)"
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackObjectiveCapture == true)
+if (CurrentGameMode() != GameMode.Control)
+if (IsObjectiveComplete(Logs_CurrentObjectiveIndex) == true)
+{
+    LogToInspector(<",objective_captured,<0>,<1>,<2>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>,<1>", IsTeamOnOffense(Team.Team1) ? Team.Team1 : Team.Team2, ObjectiveIndex()>, <"<0>,<1>,<2>", null, null, MatchTime()>>);
+    Logs_CurrentObjectiveIndex = ObjectiveIndex();
+}
+
+rule: "Logs: Objective Captured (Control)"
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackObjectiveCapture == true)
+if (IsGameInProgress() == true)
+if (CurrentGameMode() == GameMode.Control)
+if (ControlModeScoringTeam() != Logs_CurrentControlScoringTeam)
+{
+    LogToInspector(<",objective_captured,<0>,<1>,<2>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>,<1>", ControlModeScoringTeam(), ObjectiveIndex()>, <"<0>,<1>,<2>", ControlModeScoringPercentage(Team.Team1), ControlModeScoringPercentage(Team.Team2), MatchTime()>>);
+    Logs_CurrentControlScoringTeam = ControlModeScoringTeam();
+}
+
+/* rule: "Logs: Kills"
+Event.OnDeath
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackKills == true)
+if (IsGameInProgress() == true)
+{
+    LogToInspector(<",kill,<0>,<1>", Scrim_MatchTime, <"<0>,<1>,<2>", <"<0>,<1>,<2>", TeamOf(Attacker()), Attacker(), HeroOf(Attacker())>, <"<0>,<1>,<2>", TeamOf(Victim()), Victim(), HeroOf(Victim())>, <"<0>,<1>,<2>", <"<0>,<1>", EventAbility(), EventDamage()>, EventWasCriticalHit(), EventWasEnvironment()>>>);
+} */
+
+rule: "Logs: Hero Spawn/Swap"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if ((Logs_TrackHeroSwaps || Logs_PlayerSummaryCount != 2) == true)
+if (HeroOf(EventPlayer()) != Logs_LastHero)
+if (IsMatchComplete() == false)
+{
+    if (Logs_TrackHeroSwaps && ArrayContains(AllHeroes(), HeroOf(EventPlayer())))
+    {
+        if (ArrayContains(AllHeroes(), Logs_LastHero))
+        {
+            LogToInspector(<",hero_swap,<0>,<1>,<2>", Scrim_MatchTime, <"<0>,<1>", TeamOf(EventPlayer()), EventPlayer()>, <"<0>,<1>,<2>", HeroOf(EventPlayer()), Logs_LastHero, Scrim_MatchTime - Logs_LastHeroTime>>);
+        }
+        else
+        {
+            LogToInspector(<",hero_spawn,<0>,<1>,<2>", Scrim_MatchTime, <"<0>,<1>", TeamOf(EventPlayer()), EventPlayer()>, <"<0>,<1>,<2>", HeroOf(EventPlayer()), Logs_LastHero, Scrim_MatchTime - Logs_LastHeroTime>>);
+        }
+    }
+    if (!ArrayContains(Logs_HeroesPlayedArray, HeroOf(EventPlayer())) && ArrayContains(AllHeroes(), HeroOf(EventPlayer())))
+    {
+        ModifyVariable(Logs_HeroesPlayedArray, Operation.AppendToArray, HeroOf(EventPlayer()));
+    }
+    if (ArrayContains(AllHeroes(), HeroOf(EventPlayer())) && ArrayContains(AllHeroes(), Logs_LastHero))
+    {
+        CalcHeroPlayedTime();
+    }
+    Logs_LastHero = HeroOf(EventPlayer());
+    Logs_LastHeroTime = Scrim_MatchTime;
+}
+
+void CalcHeroPlayedTime() "Logs SUBR: Calculate Hero Played Time"
+{
+    Logs_HeroesPlayedTimeArray[IndexOfArrayValue(Logs_HeroesPlayedArray, Logs_LastHero)] += Scrim_MatchTime - Logs_LastHeroTime;
+}
+
+/* rule: "Logs: Damage"
+Event.OnDamageDealt
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackDamage == true)
+if (IsGameInProgress() == true)
+{
+    LogToInspector(<",damage,<0>,<1>", Scrim_MatchTime, <"<0>,<1>,<2>", <"<0>,<1>,<2>", TeamOf(Attacker()), Attacker(), HeroOf(Attacker())>, <"<0>,<1>,<2>", TeamOf(Victim()), Victim(), HeroOf(Victim())>, <"<0>,<1>,<2>", <"<0>,<1>", EventAbility(), EventDamage()>, EventWasCriticalHit(), EventWasEnvironment()>>>);
+} */
+
+/* rule: "Logs: Healing"
+Event.OnHealingTaken
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackHealing == true)
+if (IsGameInProgress() == true)
+{
+    LogToInspector(<",healing,<0>,<1>", Scrim_MatchTime, <"<0>,<1>,<2>", <"<0>,<1>,<2>", TeamOf(Healer()), Healer(), HeroOf(Healer())>, <"<0>,<1>,<2>", TeamOf(Healee()), Healee(), HeroOf(Healee())>, <"<0>,<1>,<2>", EventAbility(), EventHealing(), EventWasHealthPack()>>>);
+} */
+
+/* rule: "Logs: Offensive Assists"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackOffensiveAssists == true)
+if (Logs_OffensiveAssists < PlayerStat(EventPlayer(), PlayerStat.OffensiveAssists))
+if (IsGameInProgress() == true)
+{
+    LogToInspector(<",offensive_assist,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>", HeroBeingDuplicated(EventPlayer())>>);
+    Logs_OffensiveAssists += 1;
+    LoopIfConditionIsTrue();
+} */
+
+/* rule: "Logs: Defensive Assists"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackDefensiveAssists == true)
+if (Logs_DefensiveAssists < PlayerStat(EventPlayer(), PlayerStat.DefensiveAssists))
+if (IsGameInProgress() == true)
+{
+    LogToInspector(<",defensive_assist,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>", HeroBeingDuplicated(EventPlayer())>>);
+    Logs_DefensiveAssists += 1;
+    LoopIfConditionIsTrue();
+} */
+
+/* rule: "Logs: Ability 1 Used"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackAbilities == true)
+if (IsUsingAbility1(EventPlayer()) == true)
+if (IsGameInProgress() == true)
+{
+    LogToInspector(<",ability_1_used,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>", HeroBeingDuplicated(EventPlayer())>>);
+} */
+
+/* rule: "Logs: Ability 2 Used"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackAbilities == true)
+if (IsUsingAbility2(EventPlayer()) == true)
+if (IsGameInProgress() == true)
+{
+    LogToInspector(<",ability_2_used,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>", HeroBeingDuplicated(EventPlayer())>>);
+} */
+
+/* rule: "Logs: Ultimate Charged"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackUltimates == true)
+if (UltimateChargePercent(EventPlayer()) == 100)
+if (IsGameInProgress() == true)
+{
+    Logs_UltimateID += 1;
+    if (HeroOf(EventPlayer()) == Hero.Dva && IsInAlternateForm(EventPlayer()) && Logs_TrackDvaDemechs)
+    {
+        LogToInspector(<",remech_charged,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
+    }
+    else
+    {
+        LogToInspector(<",ultimate_charged,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
+    }
+} */
+
+/* rule: "Logs: Ultimate Used"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackUltimates == true)
+if (IsUsingUltimate(EventPlayer()) == true)
+if (HeroOf(EventPlayer()) != Hero.Dva)
+if (IsGameInProgress() == true)
+{
+    LogToInspector(<",ultimate_start,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
+    WaitUntil(!IsUsingUltimate(EventPlayer()), 99999);
+    LogToInspector(<",ultimate_end,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
+} */
+
+/* rule: "Logs: D.Va Remech/Self-Destruct Used"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if (IsUsingUltimate(EventPlayer()) == true)
+if (HeroOf(EventPlayer()) == Hero.Dva)
+if (IsGameInProgress() == true)
+{
+    Wait(1.74, WaitBehavior.IgnoreCondition);
+    if (Logs_TrackDvaDemechs && !IsInAlternateForm(EventPlayer()))
+    {
+        LogToInspector(<",dva_remech,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>", Logs_UltimateID>>);
+    }
+    else if (Logs_TrackUltimates)
+    {
+        LogToInspector(<",ultimate_start,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
+        WaitUntil(!IsUsingUltimate(EventPlayer()), 99999);
+        LogToInspector(<",ultimate_end,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
+    }
+} */
+
+/* rule: "Logs: Echo Duplicate"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackEchoDuplicates == true)
+if (IsGameInProgress() == true)
+if (IsDuplicating(EventPlayer()) == true)
+{
+    Logs_DuplicateID = Logs_UltimateID;
+    LogToInspector(<",echo_duplicate_start,<0>,<1>,<2>", Scrim_MatchTime, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_DuplicateID>>);
+    WaitUntil(!IsDuplicating(EventPlayer()), 99999);
+    LogToInspector(<",echo_duplicate_end,<0>,<1>,<2>", Scrim_MatchTime, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, Logs_DuplicateID>);
+} */
+
+/* rule: "Logs: Mercy Resurrect"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackMercyRez == true)
+if (IsGameInProgress() == true)
+if (IsDead(EventPlayer()) == true)
+{
+    WaitUntil(IsAlive(EventPlayer()), 99999);
+    Wait(0.24, WaitBehavior.IgnoreCondition);
+    if (!IsInSpawnRoom(EventPlayer()) && IsGameInProgress())
+    {
+        LogToInspector(<",mercy_rez,<0>,<1>", Scrim_MatchTime, <"<0>,<1>", <"<0>,<1>,<2>", TeamOf(EventPlayer()), PlayersOnHero(Hero.Mercy, TeamOf(EventPlayer())), Hero.Mercy>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>>>);
+    }
+} */
+
+rule: "Logs: Player Stat Summary"
+Event.OngoingPlayer
+if (Logs_EnableLogTracker == true)
+if ((Logs_PlayerSummaryFrequency == 0 || Logs_PlayerSummaryFrequency == 1 && IsMatchComplete()) == true)
+if (IsBetweenRounds() == true)
+{
+    EnableInspectorRecording();
+
+    CalcHeroPlayedTime();
+    for (Logs_CurrentHeroIterator = 0; CountOf(Logs_HeroesPlayedArray); 1)
+    {
+        Logs_CurrentHeroIterated = Logs_HeroesPlayedArray[Logs_CurrentHeroIterator];
+        LogToInspector(
+          <
+            ",player_stat,<0>,<1>,<2>", 
+            <
+              "<0>,<1>", Scrim_MatchTime, MatchRound()
+            >, 
+            <
+              "<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), Logs_CurrentHeroIterated
+            >, 
+            <
+              "<0>,<1>",
+              <
+                "<0>,<1>,<2>", 
+                <
+                  "<0>,<1>,<2>", 
+                  <
+                    "<0>,<1>,<2>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.Eliminations), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.FinalBlows), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.Deaths)
+                  >,
+                  <
+                    "<0>,<1>,<2>", Logs_CurrentHeroIterated == Hero.Mei ? PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HeroDamageDealt) + PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.BarrierDamageDealt) : PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.AllDamageDealt), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.BarrierDamageDealt), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HeroDamageDealt)
+                  >, 
+                  <
+                    "<0>,<1>,<2>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HealingDealt), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HealingReceived), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.SelfHealing)
+                  >
+                >,
+                <
+                  "<0>,<1>,<2>", 
+                  <
+                    "<0>,<1>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.DamageTaken), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.DamageBlocked)
+                  >, 
+                  <
+                    "<0>,<1>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.DefensiveAssists), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.OffensiveAssists)
+                  >, 
+                  <
+                    "<0>,<1>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.UltimatesEarned), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.UltimatesUsed)
+                  >
+                >, 
+                <
+                  "<0>,<1>", 
+                  <
+                    "<0>,<1>,<2>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.MultikillBest), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.Multikills), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.SoloKills)
+                  >,
+                  <
+                    "<0>,<1>,<2>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.ObjectiveKills), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.EnvironmentalKills), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.EnvironmentalDeaths)
+                  >
+                >
+              >, 
+              <
+                "<0>,<1>", 
+                  <
+                    "<0>,<1>,<2>", 
+                    <
+                      "<0>,<1>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.CriticalHits), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.CriticalHitAccuracy)
+                    >, 
+                    <
+                      "<0>,<1>,<2>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.ScopedAccuracy), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.ScopedCriticalHitAccuracy), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.ScopedCriticalHitKills)
+                    >, 
+                    <
+                      "<0>,<1>,<2>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.ShotsFired), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.ShotsHit), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.ShotsMissed)
+                    >
+                  >, 
+                  <
+                    "<0>,<1>", 
+                    <
+                      "<0>,<1>,<2>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.ScopedShots), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.ScopedHits), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.WeaponAccuracy)
+                    >, Logs_HeroesPlayedTimeArray[Logs_CurrentHeroIterator]
+                  >
+                >
+              >
+            >
+          );
+    }
+    Logs_PlayerSummaryCount += 1;
+}
+
+rule: "Logs: Player Has Joined"
+Event.OnPlayerJoin
+{
+    LogToInspector(<",player_joined,<0>,<1>,<2>", Scrim_MatchTime, EventPlayer(), TeamOf(EventPlayer())>);
+    Logs_HeroesPlayedArray = [];
+}
