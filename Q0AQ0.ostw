@@ -33,11 +33,6 @@ globalvar Map<String, Hero> _ultSaverTeam1Hero;
 globalvar Map<String, Hero> _ultSaverTeam2Hero;
 globalvar Map<String, Number> _ultSaverTeam1Charge;
 globalvar Map<String, Number> _ultSaverTeam2Charge;
-playervar String Meta_playerName;
-playervar String Meta_playerLanguage;
-playervar Boolean Ult_isPlayerReconnecting;
-playervar Number Ult_reconnectingPlayerChargePercent;
-
 globalvar String[] LANGUAGE_SAMPLES = ["Practice Range", "Trainingsbereich", "Práctica de combate", "Campo de pruebas", "Champ de tir", "Zona d'addestramento", "練習場", "훈련장", "Obszar treningowy", "Campo de Treinamento", "УЧЕБНЫЙ ПОЛИГОН", "训练靶场", "訓練中心"];
 globalvar String[] LANGUAGES = ["en-US", "de-DE", "es-ES", "es-MX", "fr-FR", "it-IT", "ja-JP", "ko-KR", "pl-PL", "pt-BR", "ru-RU", "zh-CN", "zh-TW"];
 globalvar define Scrim_MatchTime;
@@ -75,6 +70,10 @@ playervar define Logs_CurrentHeroIterator;
 playervar define Logs_CurrentHeroIterated;
 playervar define Logs_UltimateID;
 playervar define Logs_DuplicateID;
+playervar String Meta_playerName;
+playervar String Meta_playerLanguage;
+playervar Boolean Ult_isPlayerReconnecting;
+playervar Number Ult_reconnectingPlayerChargePercent;
 
 void ultSaverCleanup() 
 {
