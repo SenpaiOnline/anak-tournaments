@@ -545,7 +545,7 @@ if (IsBetweenRounds() == true)
                     "<0>,<1>,<2>", Logs_CurrentHeroIterated == Hero.Mei ? PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HeroDamageDealt) + PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.BarrierDamageDealt) : PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.AllDamageDealt), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.BarrierDamageDealt), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HeroDamageDealt)
                   >, 
                   <
-                    "<0>,<1>,<2>", PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HealingDealt), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HealingReceived), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.SelfHealing)
+                    "<0>,<1>,<2>", Logs_CurrentHeroIterated == Hero.Juno ? CalculateJunosHealingDealt() : PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HealingDealt), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.HealingReceived), PlayerHeroStat(EventPlayer(), Logs_CurrentHeroIterated, PlayerHeroStat.SelfHealing)
                   >
                 >,
                 <
@@ -603,4 +603,15 @@ Event.OnPlayerJoin
 {
     LogToInspector(<",player_joined,<0>,<1>,<2>", Scrim_MatchTime, EventPlayer(), TeamOf(EventPlayer())>);
     Logs_HeroesPlayedArray = [];
+}
+
+Number CalculateJunosHealingDealt() playervar "Calculate Juno's healing dealt"
+{
+    Number playerHealingDealt = PlayerStat(EventPlayer(), PlayerStat.HealingDealt);
+    foreach (Hero hero in Logs_HeroesPlayedArray) {
+        if (hero != Hero.Juno) {
+            playerHealingDealt -= PlayerHeroStat(EventPlayer(), hero, PlayerHeroStat.HealingDealt);
+        }
+    }
+    return playerHealingDealt;
 }
