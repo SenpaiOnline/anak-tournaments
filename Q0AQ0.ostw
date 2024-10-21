@@ -303,35 +303,52 @@ if (PayloadProgressPercentage() == 0)
     Logs_PayloadCaptureProgress = 0;
 }
 
-rule: "Logs: Objective Captured (Non-Control)"
+rule: "Logs: Objective Updated + Objective Captured (Clash)"
 if (Logs_EnableLogTracker == true)
 if (Logs_TrackObjectiveCapture == true)
-if (CurrentGameMode() != GameMode.Control)
-if (IsObjectiveComplete(Logs_CurrentObjectiveIndex) == true)
+if (Logs_CurrentObjectiveIndex != ObjectiveIndex())
 {
-    LogToInspector(<",objective_captured,<0>,<1>,<2>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>,<1>", IsTeamOnOffense(Team.Team1) ? Team.Team1 : Team.Team2, ObjectiveIndex()>, <"<0>,<1>,<2>", null, null, MatchTime()>>);
+    if (CurrentGameMode() == GameMode.Clash)
+    {
+        LogToInspector(<",objective_captured,<0>,<1>,<2>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>,<1>", ObjectiveIndex() > Logs_CurrentObjectiveIndex ? Team.Team1 : Team.Team2, ObjectiveIndex()>, <"<0>,<1>,<2>", null, null, MatchTime()>>);
+    }
+    LogToInspector(<",objective_updated,<0>,<1>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>,<1>", Logs_CurrentObjectiveIndex, ObjectiveIndex()>>);
+    MinWait();
     Logs_CurrentObjectiveIndex = ObjectiveIndex();
 }
 
-rule: "Logs: Objective Captured (Control)"
+rule: "Logs: Objective Captured (Assault/Escort/Hybrid)"
 if (Logs_EnableLogTracker == true)
 if (Logs_TrackObjectiveCapture == true)
 if (IsGameInProgress() == true)
-if (CurrentGameMode() == GameMode.Control)
+if (CurrentGameMode() != GameMode.Control)
+if (CurrentGameMode() != GameMode.Flashpoint)
+if (CurrentGameMode() != GameMode.Push)
+if (CurrentGameMode() != GameMode.Clash)
+if (IsObjectiveComplete(Logs_CurrentObjectiveIndex) == true)
+{
+    LogToInspector(<",objective_captured,<0>,<1>,<2>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>,<1>", IsTeamOnOffense(Team.Team1) ? Team.Team1 : Team.Team2, ObjectiveIndex()>, <"<0>,<1>,<2>", null, null, MatchTime()>>);
+}
+
+rule: "Logs: Objective Captured (Control/Flashpoint)"
+if (Logs_EnableLogTracker == true)
+if (Logs_TrackObjectiveCapture == true)
+if (IsGameInProgress() == true)
+if ((CurrentGameMode() == GameMode.Control || CurrentGameMode() == GameMode.Flashpoint) == true)
 if (ControlModeScoringTeam() != Logs_CurrentControlScoringTeam)
 {
     LogToInspector(<",objective_captured,<0>,<1>,<2>", <"<0>,<1>", Scrim_MatchTime, MatchRound()>, <"<0>,<1>", ControlModeScoringTeam(), ObjectiveIndex()>, <"<0>,<1>,<2>", ControlModeScoringPercentage(Team.Team1), ControlModeScoringPercentage(Team.Team2), MatchTime()>>);
     Logs_CurrentControlScoringTeam = ControlModeScoringTeam();
 }
 
-/* rule: "Logs: Kills"
+rule: "Logs: Kills"
 Event.OnDeath
 if (Logs_EnableLogTracker == true)
-if (Logs_TrackKills == true)
+// if (Logs_TrackKills == true)
 if (IsGameInProgress() == true)
 {
     LogToInspector(<",kill,<0>,<1>", Scrim_MatchTime, <"<0>,<1>,<2>", <"<0>,<1>,<2>", TeamOf(Attacker()), Attacker(), HeroOf(Attacker())>, <"<0>,<1>,<2>", TeamOf(Victim()), Victim(), HeroOf(Victim())>, <"<0>,<1>,<2>", <"<0>,<1>", EventAbility(), EventDamage()>, EventWasCriticalHit(), EventWasEnvironment()>>>);
-} */
+}
 
 rule: "Logs: Hero Spawn/Swap"
 Event.OngoingPlayer
@@ -386,29 +403,29 @@ if (IsGameInProgress() == true)
     LogToInspector(<",healing,<0>,<1>", Scrim_MatchTime, <"<0>,<1>,<2>", <"<0>,<1>,<2>", TeamOf(Healer()), Healer(), HeroOf(Healer())>, <"<0>,<1>,<2>", TeamOf(Healee()), Healee(), HeroOf(Healee())>, <"<0>,<1>,<2>", EventAbility(), EventHealing(), EventWasHealthPack()>>>);
 } */
 
-/* rule: "Logs: Offensive Assists"
+rule: "Logs: Offensive Assists"
 Event.OngoingPlayer
 if (Logs_EnableLogTracker == true)
-if (Logs_TrackOffensiveAssists == true)
+// if (Logs_TrackOffensiveAssists == true)
 if (Logs_OffensiveAssists < PlayerStat(EventPlayer(), PlayerStat.OffensiveAssists))
 if (IsGameInProgress() == true)
 {
     LogToInspector(<",offensive_assist,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>", HeroBeingDuplicated(EventPlayer())>>);
     Logs_OffensiveAssists += 1;
     LoopIfConditionIsTrue();
-} */
+}
 
-/* rule: "Logs: Defensive Assists"
+rule: "Logs: Defensive Assists"
 Event.OngoingPlayer
 if (Logs_EnableLogTracker == true)
-if (Logs_TrackDefensiveAssists == true)
+// if (Logs_TrackDefensiveAssists == true)
 if (Logs_DefensiveAssists < PlayerStat(EventPlayer(), PlayerStat.DefensiveAssists))
 if (IsGameInProgress() == true)
 {
     LogToInspector(<",defensive_assist,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>", HeroBeingDuplicated(EventPlayer())>>);
     Logs_DefensiveAssists += 1;
     LoopIfConditionIsTrue();
-} */
+}
 
 /* rule: "Logs: Ability 1 Used"
 Event.OngoingPlayer
@@ -430,10 +447,10 @@ if (IsGameInProgress() == true)
     LogToInspector(<",ability_2_used,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>", HeroBeingDuplicated(EventPlayer())>>);
 } */
 
-/* rule: "Logs: Ultimate Charged"
+rule: "Logs: Ultimate Charged"
 Event.OngoingPlayer
 if (Logs_EnableLogTracker == true)
-if (Logs_TrackUltimates == true)
+// if (Logs_TrackUltimates == true)
 if (UltimateChargePercent(EventPlayer()) == 100)
 if (IsGameInProgress() == true)
 {
@@ -446,12 +463,12 @@ if (IsGameInProgress() == true)
     {
         LogToInspector(<",ultimate_charged,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
     }
-} */
+}
 
-/* rule: "Logs: Ultimate Used"
+rule: "Logs: Ultimate Used"
 Event.OngoingPlayer
 if (Logs_EnableLogTracker == true)
-if (Logs_TrackUltimates == true)
+// if (Logs_TrackUltimates == true)
 if (IsUsingUltimate(EventPlayer()) == true)
 if (HeroOf(EventPlayer()) != Hero.Dva)
 if (IsGameInProgress() == true)
@@ -459,9 +476,9 @@ if (IsGameInProgress() == true)
     LogToInspector(<",ultimate_start,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
     WaitUntil(!IsUsingUltimate(EventPlayer()), 99999);
     LogToInspector(<",ultimate_end,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
-} */
+}
 
-/* rule: "Logs: D.Va Remech/Self-Destruct Used"
+rule: "Logs: D.Va Remech/Self-Destruct Used"
 Event.OngoingPlayer
 if (Logs_EnableLogTracker == true)
 if (IsUsingUltimate(EventPlayer()) == true)
@@ -479,12 +496,12 @@ if (IsGameInProgress() == true)
         WaitUntil(!IsUsingUltimate(EventPlayer()), 99999);
         LogToInspector(<",ultimate_end,<0>,<1>,<2>", <"<0>", Scrim_MatchTime>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_UltimateID>>);
     }
-} */
+}
 
-/* rule: "Logs: Echo Duplicate"
+rule: "Logs: Echo Duplicate"
 Event.OngoingPlayer
 if (Logs_EnableLogTracker == true)
-if (Logs_TrackEchoDuplicates == true)
+// if (Logs_TrackEchoDuplicates == true)
 if (IsGameInProgress() == true)
 if (IsDuplicating(EventPlayer()) == true)
 {
@@ -492,12 +509,12 @@ if (IsDuplicating(EventPlayer()) == true)
     LogToInspector(<",echo_duplicate_start,<0>,<1>,<2>", Scrim_MatchTime, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, <"<0>,<1>", HeroBeingDuplicated(EventPlayer()), Logs_DuplicateID>>);
     WaitUntil(!IsDuplicating(EventPlayer()), 99999);
     LogToInspector(<",echo_duplicate_end,<0>,<1>,<2>", Scrim_MatchTime, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>, Logs_DuplicateID>);
-} */
+}
 
-/* rule: "Logs: Mercy Resurrect"
+rule: "Logs: Mercy Resurrect"
 Event.OngoingPlayer
 if (Logs_EnableLogTracker == true)
-if (Logs_TrackMercyRez == true)
+// if (Logs_TrackMercyRez == true)
 if (IsGameInProgress() == true)
 if (IsDead(EventPlayer()) == true)
 {
@@ -507,7 +524,7 @@ if (IsDead(EventPlayer()) == true)
     {
         LogToInspector(<",mercy_rez,<0>,<1>", Scrim_MatchTime, <"<0>,<1>", <"<0>,<1>,<2>", TeamOf(EventPlayer()), PlayersOnHero(Hero.Mercy, TeamOf(EventPlayer())), Hero.Mercy>, <"<0>,<1>,<2>", TeamOf(EventPlayer()), EventPlayer(), HeroOf(EventPlayer())>>>);
     }
-} */
+}
 
 rule: "Logs: Player Stat Summary"
 Event.OngoingPlayer
