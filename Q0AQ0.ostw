@@ -60,6 +60,7 @@ globalvar define Logs_TrackMatchStartEnd;
 globalvar define Logs_PlayerSummaryFrequency;
 globalvar define Logs_PlayerSummaryCount;
 globalvar define Logs_TrackMercyRez;
+globalvar String Meta_hostName;
 playervar define Logs_LastHero;
 playervar define Logs_LastHeroTime;
 playervar define Logs_HeroesPlayedTimeArray;
@@ -228,13 +229,10 @@ if (MatchRound() == 1)
 }
 
 rule: "Logs: Meta"
-Event.OnPlayerJoin
 if (Logs_EnableLogTracker == true)
-if (HostPlayer() == true)
 {
-    {
-        LogToInspector(<",meta,<0>,<1>", EventPlayer(), Meta_playerLanguage>);
-    }
+    WaitUntil(HostPlayer().Meta_playerLanguage != null, 5);
+    LogToInspector(<",meta,<0>,<1>,<2>", getVersion(), HostPlayer(), HostPlayer().Meta_playerLanguage>);
 }
 
 rule: "Logs: Round Start"
