@@ -129,6 +129,15 @@ if (IsUsingUltimate())
     >);
 }
 
+rule: "Logs: Track server's load"
+Event.OngoingGlobal
+if (IsGameInProgress())
+{
+    LogToInspector(<",server_load,<0>,<1>,<2>", ServerLoad(), ServerLoadAverage(), ServerLoadPeak()>);
+    Wait(60, WaitBehavior.RestartWhenTrue);
+    LoopIfConditionIsTrue();
+}
+
 rule: "Logs: Earthshatter affected count"
 Player.Reinhardt
 Event.OngoingPlayer
