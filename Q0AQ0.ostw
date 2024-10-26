@@ -75,6 +75,7 @@ playervar String Meta_playerName;
 playervar String Meta_playerLanguage;
 playervar Boolean Ult_isPlayerReconnecting;
 playervar Number Ult_reconnectingPlayerChargePercent;
+playervar Boolean Logs_isShattered;
 playervar Boolean Logs_isFluxed;
 rule: 'Logs: On gravitic flux detection'
 Event.PlayerReceivedKnockback
@@ -98,6 +99,28 @@ if (IsUsingUltimate())
         ",gravitic_flux,<0>,<1>,<2>,<3>",
         Scrim_MatchTime, TeamOf(), EventPlayer(), CountOf(FilteredArray(AllPlayers(OppositeTeamOf(TeamOf())), ArrayElement().Logs_isFluxed))
     >);
+}
+
+rule: "Logs: Earthshatter affected count"
+Player.Reinhardt
+Event.OngoingPlayer
+if (IsUsingUltimate())
+{
+    Wait(1);
+    LogToInspector(<
+        ",earthshatter,<0>,<1>,<2>,<3>", 
+        Scrim_MatchTime, TeamOf(EventPlayer()), EventPlayer(), CountOf(FilteredArray(AllPlayers(OppositeTeamOf(TeamOf())), ArrayElement().Logs_isShattered))
+    >);
+}
+
+rule: "Logs: On earthshatter impact detection"
+Event.OnDamageTaken
+if (HeroOf(Attacker()) == Hero.Reinhardt)
+if (EventAbility() == Button.Ultimate)
+{
+    Logs_isShattered = true;
+    Wait(2);
+    Logs_isShattered = false;
 }
 
 }
