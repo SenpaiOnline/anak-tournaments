@@ -285,7 +285,7 @@ rule: "Settings: Log Options"
 {
     Logs_EnableLogTracker = true; /* WorkshopSettingToggle("Log Generator", "Enable Log Generator", true, 0); */
     Logs_OutputFormat = 0; /* WorkshopSettingCombo("Log Generator", "Output Format", 0, ["CSV"], 1); */
-    Logs_TrackHeroSwaps = true; /* WorkshopSettingToggle("Log Generator", "Hero Swaps", true, 5); */
+    Logs_TrackHeroSwaps = false; /* WorkshopSettingToggle("Log Generator", "Hero Swaps", true, 5); */
     Logs_TrackMatchStartEnd = true; /* WorkshopSettingToggle("Log Generator", "Match Start & End", true, 13); */
     Logs_TrackRoundStartEnd = true; /* WorkshopSettingToggle("Log Generator", "Round Start & End", true, 14); */
     Logs_TrackObjectiveCapture = true; /* WorkshopSettingToggle("Log Generator", "Objective Captures", false, 15); */
