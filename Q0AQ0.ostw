@@ -164,7 +164,7 @@ String getVersion() {
     return "v20241022";
 }
 
-void ultSaverCleanup() 
+void ultSaverCleanup() "Clean up current heroes and their ultimates data"
 {
     _ultSaverTeam1Hero.Keys = [];
     _ultSaverTeam1Hero.Values = [];
