@@ -160,6 +160,8 @@ if (EventAbility() == Button.Ultimate)
     Logs_isShattered = false;
 }
 
+String getVersion() {
+    return "v20241022";
 }
 
 void ultSaverCleanup() 
