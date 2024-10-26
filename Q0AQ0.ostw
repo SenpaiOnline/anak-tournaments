@@ -77,6 +77,34 @@ playervar Boolean Ult_isPlayerReconnecting;
 playervar Number Ult_reconnectingPlayerChargePercent;
 playervar Boolean Logs_isShattered;
 playervar Boolean Logs_isFluxed;
+playervar Boolean Logs_isHooked;
+playervar Number Logs_hookedFromDistance;
+
+rule: 'Logs: Detect if a player is affected by a chain hook'
+Event.OnDamageTaken
+if (EventAbility() == Button.Ability1)
+if (HeroOf(Attacker()) == Hero.Roadhog)
+{
+    Logs_isHooked = true;
+    Logs_hookedFromDistance = DistanceBetween(Attacker(), Victim());
+    Wait(2);
+    Logs_isHooked = false;
+    Logs_hookedFromDistance = null;
+}
+
+rule: "Logs: Track Hog's chain Hook"
+Event.OngoingPlayer
+Player.Roadhog
+if (IsUsingAbility1())
+{
+    Wait(1);
+    Player hookedPlayer = FirstOf(FilteredArray(AllPlayers(OppositeTeamOf(TeamOf())), ArrayElement().Logs_isHooked));
+    LogToInspector(<
+        ",chain_hook,<0>,<1>,<2>,<3>,<4>",
+        Scrim_MatchTime, TeamOf(), EventPlayer(), hookedPlayer, (hookedPlayer != null ? hookedPlayer.Logs_hookedFromDistance : null)
+    >);
+}
+
 rule: 'Logs: On gravitic flux detection'
 Event.PlayerReceivedKnockback
 if (EventAbility() == Button.Ultimate)
