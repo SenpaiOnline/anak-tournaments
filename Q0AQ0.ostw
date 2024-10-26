@@ -75,27 +75,31 @@ playervar String Meta_playerName;
 playervar String Meta_playerLanguage;
 playervar Boolean Ult_isPlayerReconnecting;
 playervar Number Ult_reconnectingPlayerChargePercent;
-playervar define Logs_fluxHitPosition;
-playervar define Logs_enemiesWithinFluxRadius;
-rule: "Logs: Track Sigma's ultimate usage"
+playervar Boolean Logs_isFluxed;
+rule: 'Logs: On gravitic flux detection'
+Event.PlayerReceivedKnockback
+if (EventAbility() == Button.Ultimate)
+if (HeroOf(Attacker()) == Hero.Sigma)
+{
+    Logs_isFluxed = true;
+    Wait(2);
+    Logs_isFluxed = false;
+}
+
+rule: "Logs: Gravitic flux affected count"
 Event.OngoingPlayer
 Player.Sigma
-if (Logs_EnableLogTracker)
 if (IsUsingUltimate())
 {
     WaitUntil(IsButtonHeld(EventPlayer(), Button.PrimaryFire), 6);
     AbortIf(!IsUsingUltimate());
-    Logs_fluxHitPosition = RayCastHitPosition(EyePosition(), EyePosition() + FacingDirectionOf() * 35, null, AllPlayers(Team.All), false);
-    if (DistanceBetween(EyePosition(), Logs_fluxHitPosition) >= 35)
-    {
-        Logs_fluxHitPosition = RayCastHitPosition(Logs_fluxHitPosition, Logs_fluxHitPosition + Down() * 40, null, AllPlayers(Team.All), false);
-    }
-    Wait(0.950);
-    Logs_enemiesWithinFluxRadius = FilteredArray(
-        PlayersWithinRadius(Logs_fluxHitPosition, 8, OppositeTeamOf(TeamOf(EventPlayer())), RadiusLOS.Off),
-        IsAlive(ArrayElement())
-    );
-    LogToInspector(<",gravitic_flux,<0>,<1>,<2>,<3>", Scrim_MatchTime, TeamOf(EventPlayer()), EventPlayer(), CountOf(Logs_enemiesWithinFluxRadius)>);
+    Wait(1.2, WaitBehavior.AbortWhenFalse);
+    LogToInspector(<
+        ",gravitic_flux,<0>,<1>,<2>,<3>",
+        Scrim_MatchTime, TeamOf(), EventPlayer(), CountOf(FilteredArray(AllPlayers(OppositeTeamOf(TeamOf())), ArrayElement().Logs_isFluxed))
+    >);
+}
+
 }
 
 void ultSaverCleanup() 
